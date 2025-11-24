@@ -64,10 +64,10 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
         <div className="flex flex-col h-full">
           <SheetHeader className="p-6 border-b">
             <div className="flex items-center justify-between">
-              <SheetTitle>Shopping Cart</SheetTitle>
+              <SheetTitle>Tu Carrito de Adopción</SheetTitle>
             </div>
             <div id="cart-description" className="sr-only">
-              Review and modify the products in your shopping cart
+              Revisa y modifica los gatitos que deseas adoptar
             </div>
           </SheetHeader>
 
@@ -75,13 +75,13 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
             <div className="flex-1 flex items-center justify-center p-6">
               <div className="text-center">
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Your cart is empty
+                  Tu carrito está vacío
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  Add some products to start your purchase
+                  Explora nuestros gatitos disponibles para adopción
                 </p>
                 <Button onClick={onClose} variant="outline">
-                  Continue Shopping
+                  Ver Gatitos
                 </Button>
               </div>
             </div>
@@ -102,7 +102,7 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                              No image
+                              Sin imagen
                             </div>
                           )}
                         </div>
@@ -160,18 +160,18 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
               <div className="border-t p-6">
                 <div className="space-y-3">
                   <div className="flex justify-between font-semibold text-lg">
-                    <span>Total</span>
+                    <span>Total Adopción</span>
                     <span>${finalTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <Button 
-                  className="w-full mt-4" 
+                  className="w-full mt-4 bg-accent hover:bg-accent/90" 
                   size="lg" 
                   onClick={handleCreateCheckout} 
                   disabled={isCreatingOrder}
                 >
-                  {isCreatingOrder ? 'Processing...' : 'Checkout'}
+                  {isCreatingOrder ? 'Procesando...' : 'Proceder con Adopción'}
                 </Button>
               </div>
             </>

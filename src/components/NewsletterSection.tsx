@@ -7,9 +7,6 @@ import { Mail } from 'lucide-react';
  * EDITABLE UI COMPONENT - NewsletterSection
  * 
  * Componente UI completamente editable para suscripción a newsletter.
- * El agente IA puede modificar colores, textos, layout, etc.
- * 
- * Consume lógica de HeadlessNewsletter (solo muestra email input).
  */
 
 export const NewsletterSection = () => {
@@ -26,20 +23,20 @@ export const NewsletterSection = () => {
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-foreground">
-                  Thanks for subscribing!
+                  ¡Gracias por suscribirte!
                 </h3>
                 <p className="text-muted-foreground">
-                  You'll receive our best offers and promotions soon.
+                  Te avisaremos cuando tengamos nuevos gatitos disponibles.
                 </p>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <h3 className="text-2xl font-bold text-foreground">
-                    Want promotional emails?
+                    ¿Quieres saber de nuevos gatitos?
                   </h3>
                   <p className="text-lg text-muted-foreground">
-                    Subscribe to our newsletter and get exclusive offers
+                    Suscríbete y te avisaremos cuando tengamos nuevos gatitos disponibles
                   </p>
                 </div>
                 
@@ -52,7 +49,7 @@ export const NewsletterSection = () => {
                 >
                   <Input 
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="tu@email.com"
                     value={logic.email}
                     onChange={(e) => logic.setEmail(e.target.value)}
                     disabled={logic.isSubmitting}
@@ -62,9 +59,9 @@ export const NewsletterSection = () => {
                   <Button 
                     type="submit"
                     disabled={logic.isSubmitting}
-                    className="sm:w-auto"
+                    className="sm:w-auto bg-accent hover:bg-accent/90"
                   >
-                    {logic.isSubmitting ? 'Subscribing...' : 'Subscribe'}
+                    {logic.isSubmitting ? 'Suscribiendo...' : 'Suscribirse'}
                   </Button>
                 </form>
                 
