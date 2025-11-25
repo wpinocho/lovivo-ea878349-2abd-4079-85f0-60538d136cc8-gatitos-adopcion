@@ -998,26 +998,40 @@
         return false;
       }
 
-      const { element, originalStyles } = previewData;
+      const { element, originalStyles, originalText, type } = previewData;
 
-      // Restore original inline styles
-      Object.entries(originalStyles).forEach(([property, value]) => {
-        const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-        
-        if (value === '' || value === null) {
-          // Remove the property if it wasn't set originally
-          element.style.removeProperty(cssProperty);
-        } else {
-          // Restore original value
-          element.style.setProperty(cssProperty, value);
+      // Handle TEXT preview revert
+      if (type === 'text' || originalText !== undefined) {
+        if (element && originalText !== undefined) {
+          element.textContent = originalText;
         }
-      });
+        state.previewElements.delete(selector);
+        if (state.config.enableDebug) {
+          console.log('[Lovivo Visual Edit] Reverted text preview for:', selector);
+        }
+        return true;
+      }
+
+      // Handle STYLE preview revert
+      if (originalStyles) {
+        Object.entries(originalStyles).forEach(([property, value]) => {
+          const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+          
+          if (value === '' || value === null) {
+            // Remove the property if it wasn't set originally
+            element.style.removeProperty(cssProperty);
+          } else {
+            // Restore original value
+            element.style.setProperty(cssProperty, value);
+          }
+        });
+      }
 
       // Remove from tracking
       state.previewElements.delete(selector);
 
       if (state.config.enableDebug) {
-        console.log('[Lovivo Visual Edit] Reverted preview for:', selector);
+        console.log('[Lovivo Visual Edit] Reverted style preview for:', selector);
       }
 
       return true;
