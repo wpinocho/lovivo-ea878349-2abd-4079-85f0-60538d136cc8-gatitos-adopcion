@@ -405,6 +405,51 @@
   }
 
   /**
+   * Check if a componentId belongs to a shared UI component
+   * These are components in /components/ui/ that affect ALL instances when modified
+   * 
+   * @param {string|null} componentId - The component ID from data-component-id
+   * @returns {Object} - { isShared, componentType, warningMessage }
+   */
+  function analyzeComponentId(componentId) {
+    if (!componentId) {
+      return {
+        isShared: false,
+        componentType: null,
+        warningMessage: null
+      };
+    }
+
+    // Patterns that indicate shared UI components
+    const sharedPatterns = [
+      /\/components\/ui\//i,           // shadcn/ui components
+      /\/components\/common\//i,       // common shared components
+      /\/components\/shared\//i,       // explicitly shared
+      /\/ui\//i                         // any ui folder
+    ];
+
+    const isShared = sharedPatterns.some(pattern => pattern.test(componentId));
+
+    if (!isShared) {
+      return {
+        isShared: false,
+        componentType: 'unique',
+        warningMessage: null
+      };
+    }
+
+    // Extract component name from path like "src/components/ui/button.tsx:46:7"
+    const match = componentId.match(/\/([^\/]+)\.tsx?:\d+/i);
+    const componentName = match ? match[1] : 'component';
+
+    return {
+      isShared: true,
+      componentType: componentName,
+      warningMessage: `Este es un componente compartido (${componentName}). Los cambios afectarán a TODAS las instancias de este componente en el proyecto.`
+    };
+  }
+
+  /**
    * Check if element is significant (has content or is interactive)
    */
   function isSignificantElement(element) {
@@ -859,9 +904,17 @@
     // Limit to 1000 characters (increased from 100)
     const textContent = directText.length > 1000 ? directText.substring(0, 1000) + '...' : directText;
 
+    // Get component ID and analyze if it's a shared component
+    const componentId = element.getAttribute('data-component-id') || null;
+    const componentAnalysis = analyzeComponentId(componentId);
+
     return {
       // Stable component ID from lovable-tagger (for AST-based persistence)
-      componentId: element.getAttribute('data-component-id') || null,
+      componentId,
+      // Shared component info (for UI warnings)
+      isSharedComponent: componentAnalysis.isShared,
+      sharedComponentType: componentAnalysis.componentType,
+      sharedComponentWarning: componentAnalysis.warningMessage,
       tagName: element.tagName,
       className: element.className,
       semanticClasses: getSemanticClasses(element),
@@ -1384,12 +1437,15 @@
             state.lastHoveredSelector = selector;
             highlightElement(element, selector);
             
-            // Read stable component ID from lovable-tagger
+            // Read stable component ID and analyze if shared
             const componentId = element.getAttribute('data-component-id') || null;
+            const componentAnalysis = analyzeComponentId(componentId);
             
             sendMessage(MESSAGE_TYPES.ELEMENT_HOVERED, { 
               selector,
-              componentId  // Stable ID for AST-based persistence
+              componentId,
+              isSharedComponent: componentAnalysis.isShared,
+              sharedComponentType: componentAnalysis.componentType
             });
             
             if (state.config.enableDebug) {
@@ -1404,12 +1460,16 @@
           state.lastHoveredSelector = selector;
           showSelection(element);
           
-          // Read stable component ID from lovable-tagger
+          // Read stable component ID and analyze if shared
           const componentId = element.getAttribute('data-component-id') || null;
+          const componentAnalysis = analyzeComponentId(componentId);
           
           sendMessage(MESSAGE_TYPES.ELEMENT_CLICKED, { 
             selector,
-            componentId  // Stable ID for AST-based persistence
+            componentId,
+            isSharedComponent: componentAnalysis.isShared,
+            sharedComponentType: componentAnalysis.componentType,
+            sharedComponentWarning: componentAnalysis.warningMessage
           });
           
           if (state.config.enableDebug) {
