@@ -25,8 +25,10 @@
     HIGHLIGHT: 'VISUAL_EDIT_HIGHLIGHT',
     CLEAR_HIGHLIGHT: 'VISUAL_EDIT_CLEAR_HIGHLIGHT',
     REQUEST_INFO: 'VISUAL_EDIT_REQUEST_INFO',
-    APPLY_PREVIEW: 'VISUAL_EDIT_APPLY_PREVIEW',      // New: Apply preview styles
-    REVERT_PREVIEW: 'VISUAL_EDIT_REVERT_PREVIEW',    // New: Revert to original
+    APPLY_PREVIEW: 'VISUAL_EDIT_APPLY_PREVIEW',           // Apply preview styles
+    REVERT_PREVIEW: 'VISUAL_EDIT_REVERT_PREVIEW',         // Revert styles to original
+    APPLY_TEXT_PREVIEW: 'VISUAL_EDIT_APPLY_TEXT_PREVIEW', // Apply text preview
+    REVERT_TEXT_PREVIEW: 'VISUAL_EDIT_REVERT_TEXT_PREVIEW', // Revert text to original
     
     // Iframe → Parent
     ELEMENT_HOVERED: 'ELEMENT_HOVERED',
@@ -35,9 +37,11 @@
     NO_ELEMENT: 'NO_ELEMENT_DETECTED',
     ERROR: 'VISUAL_EDIT_ERROR',
     READY: 'VISUAL_EDIT_READY',
-    PREVIEW_APPLIED: 'VISUAL_EDIT_PREVIEW_APPLIED',  // New: Preview applied confirmation
-    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED',// New: Preview reverted confirmation
-    SCROLL_DETECTED: 'SCROLL_DETECTED'                // New: Internal scroll detected
+    PREVIEW_APPLIED: 'VISUAL_EDIT_PREVIEW_APPLIED',       // Preview applied confirmation
+    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED',     // Preview reverted confirmation
+    TEXT_PREVIEW_APPLIED: 'VISUAL_EDIT_TEXT_PREVIEW_APPLIED',   // Text preview applied
+    TEXT_PREVIEW_REVERTED: 'VISUAL_EDIT_TEXT_PREVIEW_REVERTED', // Text preview reverted
+    SCROLL_DETECTED: 'SCROLL_DETECTED'                    // Internal scroll detected
   };
 
   // ===== GLOBAL STATE =====
@@ -1097,6 +1101,109 @@
     }
   }
 
+  /**
+   * Handle APPLY_TEXT_PREVIEW message from parent
+   * Applies temporary text changes for live preview
+   */
+  function handleApplyTextPreview(data) {
+    const { selector, text } = data;
+
+    if (!selector || text === undefined) {
+      sendMessage(MESSAGE_TYPES.ERROR, {
+        error: 'Invalid text preview data: selector and text required',
+        selector
+      });
+      return;
+    }
+
+    try {
+      const element = document.querySelector(selector);
+      
+      if (!element) {
+        sendMessage(MESSAGE_TYPES.ERROR, {
+          error: 'Element not found for text preview',
+          selector
+        });
+        return;
+      }
+
+      // Save original text if first time (use special key for text)
+      const textKey = selector + '_text';
+      if (!state.previewElements.has(textKey)) {
+        state.previewElements.set(textKey, {
+          element,
+          originalText: element.textContent,
+          type: 'text'
+        });
+      }
+
+      // Apply text change
+      element.textContent = text;
+
+      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_APPLIED, {
+        selector,
+        text,
+        originalText: state.previewElements.get(textKey).originalText
+      });
+    } catch (error) {
+      console.error('[Lovivo Visual Edit] Error applying text preview:', error);
+      sendMessage(MESSAGE_TYPES.ERROR, {
+        error: error.message,
+        selector
+      });
+    }
+  }
+
+  /**
+   * Handle REVERT_TEXT_PREVIEW message from parent
+   * Reverts text to original
+   */
+  function handleRevertTextPreview(data) {
+    const { selector } = data;
+
+    if (!selector) {
+      // Revert all text previews if no specific selector
+      for (const [key, value] of state.previewElements.entries()) {
+        if (value.type === 'text' && value.element && value.originalText !== undefined) {
+          value.element.textContent = value.originalText;
+          state.previewElements.delete(key);
+        }
+      }
+      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_REVERTED, {
+        selector: 'all'
+      });
+      return;
+    }
+
+    try {
+      const textKey = selector + '_text';
+      const savedData = state.previewElements.get(textKey);
+
+      if (!savedData) {
+        sendMessage(MESSAGE_TYPES.ERROR, {
+          error: 'No text preview found to revert',
+          selector
+        });
+        return;
+      }
+
+      // Restore original text
+      savedData.element.textContent = savedData.originalText;
+      state.previewElements.delete(textKey);
+
+      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_REVERTED, {
+        selector,
+        restoredText: savedData.originalText
+      });
+    } catch (error) {
+      console.error('[Lovivo Visual Edit] Error reverting text preview:', error);
+      sendMessage(MESSAGE_TYPES.ERROR, {
+        error: error.message,
+        selector
+      });
+    }
+  }
+
   // ===== PHASE 5: PERFORMANCE & EVENT HANDLING =====
 
   /**
@@ -1666,6 +1773,14 @@
 
         case MESSAGE_TYPES.REVERT_PREVIEW:
           handleRevertPreview(data);
+          break;
+
+        case MESSAGE_TYPES.APPLY_TEXT_PREVIEW:
+          handleApplyTextPreview(data);
+          break;
+
+        case MESSAGE_TYPES.REVERT_TEXT_PREVIEW:
+          handleRevertTextPreview(data);
           break;
 
         // Special configuration message
