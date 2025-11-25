@@ -36,7 +36,8 @@
     ERROR: 'VISUAL_EDIT_ERROR',
     READY: 'VISUAL_EDIT_READY',
     PREVIEW_APPLIED: 'VISUAL_EDIT_PREVIEW_APPLIED',  // New: Preview applied confirmation
-    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED'// New: Preview reverted confirmation
+    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED',// New: Preview reverted confirmation
+    SCROLL_DETECTED: 'SCROLL_DETECTED'                // New: Internal scroll detected
   };
 
   // ===== GLOBAL STATE =====
@@ -762,16 +763,22 @@
 
       // Setup scroll/resize handlers if not already set
       if (!state.scrollHandlerId) {
-        const updatePositions = () => {
+        // Scroll handler - notify parent to clear selection
+        const handleScroll = () => {
+          sendMessage(MESSAGE_TYPES.SCROLL_DETECTED, {});
+          clearHighlight(); // Clear highlight locally
+        };
+        
+        // Resize handler - update overlay positions
+        const handleResize = () => {
           if (state.currentHighlightedElement) {
             updateOverlayPosition(overlay, state.currentHighlightedElement);
-            // No tooltip to update
           }
         };
         
         state.scrollHandlerId = true;
-        window.addEventListener('scroll', updatePositions, true);
-        window.addEventListener('resize', updatePositions);
+        window.addEventListener('scroll', handleScroll, true);
+        window.addEventListener('resize', handleResize);
       }
     } catch (error) {
       console.error('[Lovivo Visual Edit] Error highlighting element:', error);
