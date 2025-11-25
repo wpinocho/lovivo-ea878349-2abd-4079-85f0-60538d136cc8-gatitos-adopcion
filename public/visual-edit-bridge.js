@@ -421,11 +421,13 @@
     }
 
     // Patterns that indicate shared UI components
+    // ONLY src/components/ui/ contains shadcn reusable components
+    // src/pages/ui/ contains page-specific UI (NOT shared)
     const sharedPatterns = [
-      /\/components\/ui\//i,           // shadcn/ui components
+      /\/components\/ui\//i,           // shadcn/ui components (button, card, input, etc.)
       /\/components\/common\//i,       // common shared components
-      /\/components\/shared\//i,       // explicitly shared
-      /\/ui\//i                         // any ui folder
+      /\/components\/shared\//i        // explicitly shared
+      // NOTE: Do NOT add generic /\/ui\//i - it would match src/pages/ui/ incorrectly
     ];
 
     const isShared = sharedPatterns.some(pattern => pattern.test(componentId));
