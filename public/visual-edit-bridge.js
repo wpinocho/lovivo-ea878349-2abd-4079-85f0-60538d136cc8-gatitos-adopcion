@@ -408,7 +408,7 @@
    * Check if a componentId belongs to a shared UI component
    * These are components in /components/ui/ that affect ALL instances when modified
    * 
-   * @param {string|null} componentId - The component ID from data-component-id
+   * @param {string|null} componentId - The component ID from data-lov-id or data-component-id
    * @returns {Object} - { isShared, componentType, warningMessage }
    */
   function analyzeComponentId(componentId) {
@@ -905,7 +905,8 @@
     const textContent = directText.length > 1000 ? directText.substring(0, 1000) + '...' : directText;
 
     // Get component ID and analyze if it's a shared component
-    const componentId = element.getAttribute('data-component-id') || null;
+    // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
+    const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
     const componentAnalysis = analyzeComponentId(componentId);
 
     return {
@@ -1438,7 +1439,8 @@
             highlightElement(element, selector);
             
             // Read stable component ID and analyze if shared
-            const componentId = element.getAttribute('data-component-id') || null;
+            // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
+            const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
             const componentAnalysis = analyzeComponentId(componentId);
             
             sendMessage(MESSAGE_TYPES.ELEMENT_HOVERED, { 
@@ -1461,7 +1463,8 @@
           showSelection(element);
           
           // Read stable component ID and analyze if shared
-          const componentId = element.getAttribute('data-component-id') || null;
+          // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
+          const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
           const componentAnalysis = analyzeComponentId(componentId);
           
           sendMessage(MESSAGE_TYPES.ELEMENT_CLICKED, { 
