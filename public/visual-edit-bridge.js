@@ -766,7 +766,8 @@
         // Scroll handler - notify parent to clear selection
         const handleScroll = () => {
           sendMessage(MESSAGE_TYPES.SCROLL_DETECTED, {});
-          clearHighlight(); // Clear highlight locally
+          clearHighlight();   // Clear hover overlay
+          clearSelection();   // Clear selection overlay
         };
         
         // Resize handler - update overlay positions
@@ -817,6 +818,29 @@
   }
 
   /**
+   * Get direct text content of an element (without children)
+   * Returns only the text directly inside the element, not from child elements
+   */
+  function getDirectTextContent(element) {
+    if (!element) return '';
+    
+    // Get all direct text nodes (excluding child elements)
+    const textNodes = Array.from(element.childNodes)
+      .filter(node => node.nodeType === Node.TEXT_NODE)
+      .map(node => node.textContent.trim())
+      .filter(text => text.length > 0)
+      .join(' ');
+    
+    // If no direct text, check if it's a simple text element (h1, p, span, etc.)
+    // In that case, return the full textContent
+    if (!textNodes && element.children.length === 0) {
+      return element.textContent?.trim() || '';
+    }
+    
+    return textNodes;
+  }
+
+  /**
    * Get detailed information about an element
    * Includes all CSS properties needed for visual editing
    */
@@ -825,6 +849,11 @@
 
     const computedStyles = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
+    
+    // Get direct text content (without children)
+    const directText = getDirectTextContent(element);
+    // Limit to 1000 characters (increased from 100)
+    const textContent = directText.length > 1000 ? directText.substring(0, 1000) + '...' : directText;
 
     return {
       // Stable component ID from lovable-tagger (for AST-based persistence)
@@ -832,7 +861,8 @@
       tagName: element.tagName,
       className: element.className,
       semanticClasses: getSemanticClasses(element),
-      textContent: element.textContent?.substring(0, 100) || '',
+      textContent: textContent,
+      hasChildren: element.children.length > 0, // Indica si tiene elementos hijos
       computedStyles: {
         // ===== BASIC DIMENSIONS =====
         width: computedStyles.width,
