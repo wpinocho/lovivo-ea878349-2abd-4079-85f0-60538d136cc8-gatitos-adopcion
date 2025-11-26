@@ -138,9 +138,9 @@ export const IndexUI = ({
               <h2 className="text-3xl font-bold text-foreground mb-2" style={{
               letterSpacing: "0px"
             }}>Todos los Gatitos Disponibles! Prueba</h2>
-              <p className="text-muted-foreground">
-                {filteredProducts.length} {filteredProducts.length === 1 ? 'gatito esperando' : 'gatitos esperando'} por ti
-              </p>
+              <p className="text-muted-foreground" style={{
+              letterSpacing: "0px"
+            }}>10 gatitos esperando por ti</p>
             </div>
             {selectedCollectionId && <Button variant="outline" onClick={handleShowAllProducts} className="border-accent text-accent hover:bg-accent hover:text-white">
                 Ver Todos
