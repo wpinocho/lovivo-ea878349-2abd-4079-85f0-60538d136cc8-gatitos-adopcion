@@ -45,6 +45,8 @@ export const IndexUI = ({
             </div>
             
             <h1 className="text-5xl md:text-6xl font-bold mb-4" style={{
+            fontSize: "80px",
+            fontWeight: "100",
             letterSpacing: "0px"
           }}>Adopta un Gatito y Cambia una Vida!</h1>
             
