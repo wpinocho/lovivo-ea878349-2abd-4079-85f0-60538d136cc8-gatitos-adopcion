@@ -137,8 +137,7 @@ export const IndexUI = ({
             <div>
               <h2 className="text-3xl font-bold text-foreground mb-2" style={{
               letterSpacing: "0px"
-            }}>Todos los Gatitos Disponibles!{selectedCollectionId ? `${collections.find(c => c.id === selectedCollectionId)?.name || 'Colección'}` : 'Todos los Gatitos Disponibles'}
-              </h2>
+            }}>Todos los Gatitos Disponibles! Prueba</h2>
               <p className="text-muted-foreground">
                 {filteredProducts.length} {filteredProducts.length === 1 ? 'gatito esperando' : 'gatitos esperando'} por ti
               </p>
