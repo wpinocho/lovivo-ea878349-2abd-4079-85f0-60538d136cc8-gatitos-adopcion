@@ -44,9 +44,9 @@ export const IndexUI = ({
               <span className="text-sm font-medium">Un hogar para cada gatito</span>
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold mb-4">
-              Adopta un Gatito y Cambia una Vida
-            </h1>
+            <h1 className="text-5xl md:text-6xl font-bold mb-4" style={{
+            letterSpacing: "0px"
+          }}>Adopta un Gatito y Cambia una Vida!</h1>
             
             <p className="text-xl text-white/90 mb-8">
               Cada gatito merece un hogar lleno de amor. Dale una segunda oportunidad 
