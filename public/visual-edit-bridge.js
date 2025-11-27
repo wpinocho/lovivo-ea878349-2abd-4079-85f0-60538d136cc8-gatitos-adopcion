@@ -25,10 +25,8 @@
     HIGHLIGHT: 'VISUAL_EDIT_HIGHLIGHT',
     CLEAR_HIGHLIGHT: 'VISUAL_EDIT_CLEAR_HIGHLIGHT',
     REQUEST_INFO: 'VISUAL_EDIT_REQUEST_INFO',
-    APPLY_PREVIEW: 'VISUAL_EDIT_APPLY_PREVIEW',           // Apply preview styles
-    REVERT_PREVIEW: 'VISUAL_EDIT_REVERT_PREVIEW',         // Revert styles to original
-    APPLY_TEXT_PREVIEW: 'VISUAL_EDIT_APPLY_TEXT_PREVIEW', // Apply text preview
-    REVERT_TEXT_PREVIEW: 'VISUAL_EDIT_REVERT_TEXT_PREVIEW', // Revert text to original
+    APPLY_PREVIEW: 'VISUAL_EDIT_APPLY_PREVIEW',      // New: Apply preview styles
+    REVERT_PREVIEW: 'VISUAL_EDIT_REVERT_PREVIEW',    // New: Revert to original
     
     // Iframe → Parent
     ELEMENT_HOVERED: 'ELEMENT_HOVERED',
@@ -37,11 +35,8 @@
     NO_ELEMENT: 'NO_ELEMENT_DETECTED',
     ERROR: 'VISUAL_EDIT_ERROR',
     READY: 'VISUAL_EDIT_READY',
-    PREVIEW_APPLIED: 'VISUAL_EDIT_PREVIEW_APPLIED',       // Preview applied confirmation
-    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED',     // Preview reverted confirmation
-    TEXT_PREVIEW_APPLIED: 'VISUAL_EDIT_TEXT_PREVIEW_APPLIED',   // Text preview applied
-    TEXT_PREVIEW_REVERTED: 'VISUAL_EDIT_TEXT_PREVIEW_REVERTED', // Text preview reverted
-    SCROLL_DETECTED: 'SCROLL_DETECTED'                    // Internal scroll detected
+    PREVIEW_APPLIED: 'VISUAL_EDIT_PREVIEW_APPLIED',  // New: Preview applied confirmation
+    PREVIEW_REVERTED: 'VISUAL_EDIT_PREVIEW_REVERTED'// New: Preview reverted confirmation
   };
 
   // ===== GLOBAL STATE =====
@@ -402,53 +397,6 @@
       console.warn('[Lovivo Visual Edit] Could not adjust coordinates:', e);
       return { x: parentX, y: parentY };
     }
-  }
-
-  /**
-   * Check if a componentId belongs to a shared UI component
-   * These are components in /components/ui/ that affect ALL instances when modified
-   * 
-   * @param {string|null} componentId - The component ID from data-lov-id or data-component-id
-   * @returns {Object} - { isShared, componentType, warningMessage }
-   */
-  function analyzeComponentId(componentId) {
-    if (!componentId) {
-      return {
-        isShared: false,
-        componentType: null,
-        warningMessage: null
-      };
-    }
-
-    // Patterns that indicate shared UI components
-    // ONLY src/components/ui/ contains shadcn reusable components
-    // src/pages/ui/ contains page-specific UI (NOT shared)
-    const sharedPatterns = [
-      /\/components\/ui\//i,           // shadcn/ui components (button, card, input, etc.)
-      /\/components\/common\//i,       // common shared components
-      /\/components\/shared\//i        // explicitly shared
-      // NOTE: Do NOT add generic /\/ui\//i - it would match src/pages/ui/ incorrectly
-    ];
-
-    const isShared = sharedPatterns.some(pattern => pattern.test(componentId));
-
-    if (!isShared) {
-      return {
-        isShared: false,
-        componentType: 'unique',
-        warningMessage: null
-      };
-    }
-
-    // Extract component name from path like "src/components/ui/button.tsx:46:7"
-    const match = componentId.match(/\/([^\/]+)\.tsx?:\d+/i);
-    const componentName = match ? match[1] : 'component';
-
-    return {
-      isShared: true,
-      componentType: componentName,
-      warningMessage: `Este es un componente compartido (${componentName}). Los cambios afectarán a TODAS las instancias de este componente en el proyecto.`
-    };
   }
 
   /**
@@ -814,23 +762,16 @@
 
       // Setup scroll/resize handlers if not already set
       if (!state.scrollHandlerId) {
-        // Scroll handler - notify parent to clear selection
-        const handleScroll = () => {
-          sendMessage(MESSAGE_TYPES.SCROLL_DETECTED, {});
-          clearHighlight();   // Clear hover overlay
-          clearSelection();   // Clear selection overlay
-        };
-        
-        // Resize handler - update overlay positions
-        const handleResize = () => {
+        const updatePositions = () => {
           if (state.currentHighlightedElement) {
             updateOverlayPosition(overlay, state.currentHighlightedElement);
+            // No tooltip to update
           }
         };
         
         state.scrollHandlerId = true;
-        window.addEventListener('scroll', handleScroll, true);
-        window.addEventListener('resize', handleResize);
+        window.addEventListener('scroll', updatePositions, true);
+        window.addEventListener('resize', updatePositions);
       }
     } catch (error) {
       console.error('[Lovivo Visual Edit] Error highlighting element:', error);
@@ -869,29 +810,6 @@
   }
 
   /**
-   * Get direct text content of an element (without children)
-   * Returns only the text directly inside the element, not from child elements
-   */
-  function getDirectTextContent(element) {
-    if (!element) return '';
-    
-    // Get all direct text nodes (excluding child elements)
-    const textNodes = Array.from(element.childNodes)
-      .filter(node => node.nodeType === Node.TEXT_NODE)
-      .map(node => node.textContent.trim())
-      .filter(text => text.length > 0)
-      .join(' ');
-    
-    // If no direct text, check if it's a simple text element (h1, p, span, etc.)
-    // In that case, return the full textContent
-    if (!textNodes && element.children.length === 0) {
-      return element.textContent?.trim() || '';
-    }
-    
-    return textNodes;
-  }
-
-  /**
    * Get detailed information about an element
    * Includes all CSS properties needed for visual editing
    */
@@ -900,29 +818,14 @@
 
     const computedStyles = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
-    
-    // Get direct text content (without children)
-    const directText = getDirectTextContent(element);
-    // Limit to 1000 characters (increased from 100)
-    const textContent = directText.length > 1000 ? directText.substring(0, 1000) + '...' : directText;
-
-    // Get component ID and analyze if it's a shared component
-    // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
-    const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
-    const componentAnalysis = analyzeComponentId(componentId);
 
     return {
       // Stable component ID from lovable-tagger (for AST-based persistence)
-      componentId,
-      // Shared component info (for UI warnings)
-      isSharedComponent: componentAnalysis.isShared,
-      sharedComponentType: componentAnalysis.componentType,
-      sharedComponentWarning: componentAnalysis.warningMessage,
+      componentId: element.getAttribute('data-component-id') || null,
       tagName: element.tagName,
       className: element.className,
       semanticClasses: getSemanticClasses(element),
-      textContent: textContent,
-      hasChildren: element.children.length > 0, // Indica si tiene elementos hijos
+      textContent: element.textContent?.substring(0, 100) || '',
       computedStyles: {
         // ===== BASIC DIMENSIONS =====
         width: computedStyles.width,
@@ -1054,40 +957,26 @@
         return false;
       }
 
-      const { element, originalStyles, originalText, type } = previewData;
+      const { element, originalStyles } = previewData;
 
-      // Handle TEXT preview revert
-      if (type === 'text' || originalText !== undefined) {
-        if (element && originalText !== undefined) {
-          element.textContent = originalText;
+      // Restore original inline styles
+      Object.entries(originalStyles).forEach(([property, value]) => {
+        const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+        
+        if (value === '' || value === null) {
+          // Remove the property if it wasn't set originally
+          element.style.removeProperty(cssProperty);
+        } else {
+          // Restore original value
+          element.style.setProperty(cssProperty, value);
         }
-        state.previewElements.delete(selector);
-        if (state.config.enableDebug) {
-          console.log('[Lovivo Visual Edit] Reverted text preview for:', selector);
-        }
-        return true;
-      }
-
-      // Handle STYLE preview revert
-      if (originalStyles) {
-        Object.entries(originalStyles).forEach(([property, value]) => {
-          const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-          
-          if (value === '' || value === null) {
-            // Remove the property if it wasn't set originally
-            element.style.removeProperty(cssProperty);
-          } else {
-            // Restore original value
-            element.style.setProperty(cssProperty, value);
-          }
-        });
-      }
+      });
 
       // Remove from tracking
       state.previewElements.delete(selector);
 
       if (state.config.enableDebug) {
-        console.log('[Lovivo Visual Edit] Reverted style preview for:', selector);
+        console.log('[Lovivo Visual Edit] Reverted preview for:', selector);
       }
 
       return true;
@@ -1166,109 +1055,6 @@
     } else {
       sendMessage(MESSAGE_TYPES.ERROR, {
         error: 'Failed to revert preview styles',
-        selector
-      });
-    }
-  }
-
-  /**
-   * Handle APPLY_TEXT_PREVIEW message from parent
-   * Applies temporary text changes for live preview
-   */
-  function handleApplyTextPreview(data) {
-    const { selector, text } = data;
-
-    if (!selector || text === undefined) {
-      sendMessage(MESSAGE_TYPES.ERROR, {
-        error: 'Invalid text preview data: selector and text required',
-        selector
-      });
-      return;
-    }
-
-    try {
-      const element = document.querySelector(selector);
-      
-      if (!element) {
-        sendMessage(MESSAGE_TYPES.ERROR, {
-          error: 'Element not found for text preview',
-          selector
-        });
-        return;
-      }
-
-      // Save original text if first time (use special key for text)
-      const textKey = selector + '_text';
-      if (!state.previewElements.has(textKey)) {
-        state.previewElements.set(textKey, {
-          element,
-          originalText: element.textContent,
-          type: 'text'
-        });
-      }
-
-      // Apply text change
-      element.textContent = text;
-
-      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_APPLIED, {
-        selector,
-        text,
-        originalText: state.previewElements.get(textKey).originalText
-      });
-    } catch (error) {
-      console.error('[Lovivo Visual Edit] Error applying text preview:', error);
-      sendMessage(MESSAGE_TYPES.ERROR, {
-        error: error.message,
-        selector
-      });
-    }
-  }
-
-  /**
-   * Handle REVERT_TEXT_PREVIEW message from parent
-   * Reverts text to original
-   */
-  function handleRevertTextPreview(data) {
-    const { selector } = data;
-
-    if (!selector) {
-      // Revert all text previews if no specific selector
-      for (const [key, value] of state.previewElements.entries()) {
-        if (value.type === 'text' && value.element && value.originalText !== undefined) {
-          value.element.textContent = value.originalText;
-          state.previewElements.delete(key);
-        }
-      }
-      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_REVERTED, {
-        selector: 'all'
-      });
-      return;
-    }
-
-    try {
-      const textKey = selector + '_text';
-      const savedData = state.previewElements.get(textKey);
-
-      if (!savedData) {
-        sendMessage(MESSAGE_TYPES.ERROR, {
-          error: 'No text preview found to revert',
-          selector
-        });
-        return;
-      }
-
-      // Restore original text
-      savedData.element.textContent = savedData.originalText;
-      state.previewElements.delete(textKey);
-
-      sendMessage(MESSAGE_TYPES.TEXT_PREVIEW_REVERTED, {
-        selector,
-        restoredText: savedData.originalText
-      });
-    } catch (error) {
-      console.error('[Lovivo Visual Edit] Error reverting text preview:', error);
-      sendMessage(MESSAGE_TYPES.ERROR, {
-        error: error.message,
         selector
       });
     }
@@ -1440,16 +1226,12 @@
             state.lastHoveredSelector = selector;
             highlightElement(element, selector);
             
-            // Read stable component ID and analyze if shared
-            // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
-            const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
-            const componentAnalysis = analyzeComponentId(componentId);
+            // Read stable component ID from lovable-tagger
+            const componentId = element.getAttribute('data-component-id') || null;
             
             sendMessage(MESSAGE_TYPES.ELEMENT_HOVERED, { 
               selector,
-              componentId,
-              isSharedComponent: componentAnalysis.isShared,
-              sharedComponentType: componentAnalysis.componentType
+              componentId  // Stable ID for AST-based persistence
             });
             
             if (state.config.enableDebug) {
@@ -1464,17 +1246,12 @@
           state.lastHoveredSelector = selector;
           showSelection(element);
           
-          // Read stable component ID and analyze if shared
-          // lovable-tagger uses 'data-lov-id', fallback to 'data-component-id' for compatibility
-          const componentId = element.getAttribute('data-lov-id') || element.getAttribute('data-component-id') || null;
-          const componentAnalysis = analyzeComponentId(componentId);
+          // Read stable component ID from lovable-tagger
+          const componentId = element.getAttribute('data-component-id') || null;
           
           sendMessage(MESSAGE_TYPES.ELEMENT_CLICKED, { 
             selector,
-            componentId,
-            isSharedComponent: componentAnalysis.isShared,
-            sharedComponentType: componentAnalysis.componentType,
-            sharedComponentWarning: componentAnalysis.warningMessage
+            componentId  // Stable ID for AST-based persistence
           });
           
           if (state.config.enableDebug) {
@@ -1852,14 +1629,6 @@
 
         case MESSAGE_TYPES.REVERT_PREVIEW:
           handleRevertPreview(data);
-          break;
-
-        case MESSAGE_TYPES.APPLY_TEXT_PREVIEW:
-          handleApplyTextPreview(data);
-          break;
-
-        case MESSAGE_TYPES.REVERT_TEXT_PREVIEW:
-          handleRevertTextPreview(data);
           break;
 
         // Special configuration message
